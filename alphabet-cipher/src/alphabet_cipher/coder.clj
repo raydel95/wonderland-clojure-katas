@@ -1,21 +1,37 @@
 (ns alphabet-cipher.coder)
 
-(defn oper [op c1 c2] (let [a (int \a)
-                         f (fn [v] (- (int v) a))]
-                     (char (+ a (+ (mod (+ (op (f c1) (f c2)) 26) 26))))))
+(def base (int \a))
+(def alphabet-count 26)
 
-(defn process [f keyword message] (apply str (map (partial oper f)  message (cycle keyword))))
+(defn char->int [c] (- (int c) base))
 
-(defn movek [s ph k c]
+(defn oper
+  "calculate op(+ or -) between two characters mod the alphabet size"
+  [op c1 c2]
+  (-> (op (char->int c1) (char->int c2))
+      (+ alphabet-count)
+      (mod alphabet-count)
+      (+ base)
+      (char)))
+
+(defn process
+  "find in the cipher table the encrypted message if op is +
+   and if op is - find the cipher or the code depending in the order of the args"
+  [op keyword message]
+  (apply str (map (partial oper op) message (cycle keyword))))
+
+(defn- phi* [s ph k c]
   (last (take-while identity
                     (iterate
                      #(when (and (> % 0)
                                  (not= (get s %) c))
                         (ph (dec %))) k))))
 
-(defn phi [s]
+(defn phi
+  "returns kmp phi vector"
+  [s]
   (reduce (fn [[vphi k] c]
-            (let [k (movek s vphi k c)
+            (let [k (phi* s vphi k c)
                   inck (if (= (get s k) c)
                          (inc k) k)]
               [(conj vphi inck)  inck])) [[0] 0] (rest s)))
@@ -26,7 +42,10 @@
 (defn decode [keyword message]
   (process - keyword message))
 
-(defn decipher [cipher message]
+(defn decipher
+  "solution is the prefix of the decoded key with size 'n - phi[n - 1]'
+    where n is the size of the decoded key"
+  [cipher message]
   (let [sol (process - message cipher)
-        pref (- (count sol) (last (phi sol)))]
-    (apply str (take pref sol))))
+        prefix (- (count sol) (last (phi sol)))]
+    (apply str (take prefix sol))))
