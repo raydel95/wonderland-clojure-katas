@@ -27,8 +27,7 @@
         (valid? numbers sum square)
         (->> numbers
              (map #(solve (difference numbers #{%}) sum (conj square %)))
-             (filter identity)
-             first)))
+             (some identity))))
 
 (defn magic-square [values]
   (let [c (int (Math/sqrt (count values)))
